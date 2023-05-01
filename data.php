@@ -65,6 +65,7 @@ function read_to_open_times(){
 			$wooden_walkway->date=$validTime->startTime;
 			set_open_times($wooden_walkway,$validTime->weatherElement);
 			array_push($wooden_walkways, $wooden_walkway);
+			//display_wooden_walkway($wooden_walkway);
 		}
 	//$Sunset_URL timeFrom=2022-10-29&timeTo=2022-11-29
 	$timeFrom=date("Y-m-d");
@@ -73,10 +74,19 @@ function read_to_open_times(){
 	$Sunset_URL = str_replace("2022-11-29", $timeTo, $Sunset_URL);	
 	$sunset=read_to_json($Sunset_URL);
 	$sunset_json=json_decode($sunset);
+	//echo $sunset;
+	//display_wooden_walkways();
 	for ($i=0;$i<30;$i++)
 		set_sunset($wooden_walkways[$i],$sunset_json->records->locations->location[0]->time[$i]);
-	//display_wooden_walkways();
 	wooden_walkway_save_to_file($wooden_walkways);//存檔
+}
+function display_wooden_walkway($wooden_walkway){
+	for ($i=0;$i<count($wooden_walkway->open_times_start);$i++)	{
+		echo $wooden_walkway->date."--";
+		echo $wooden_walkway->open_times_start[$i]."--";
+		echo $wooden_walkway->open_times_end[$i]."--";
+		echo "<br>";	
+	}
 }
 function display_wooden_walkways(){
 	global $wooden_walkways;
@@ -91,11 +101,13 @@ function display_wooden_walkways(){
 }
 
 function set_sunset(&$wooden_walkway,$time){
-	//echo $time->dataTime."*".$time->parameter[5]->parameterValue."<br>";
+	//echo $time->Date."<br>";
 	$last_one=count($wooden_walkway->open_times_start)-1;
 	$start_time=string_to_minutes($wooden_walkway->open_times_start[$last_one]);
 	$end_time=string_to_minutes($wooden_walkway->open_times_end[$last_one]);
-	$sunset=string_to_minutes($time->parameter[5]->parameterValue);
+	//echo "SunSetTime:".$time->SunSetTime."<br>";
+	$sunset=string_to_minutes($time->SunSetTime);
+	//echo "sunset"+$sunset+"<br>";
 	if ($sunset>=$end_time)
 		return;
 	if 	($sunset<$start_time)
@@ -104,7 +116,7 @@ function set_sunset(&$wooden_walkway,$time){
 		array_splice($wooden_walkway->open_times_start,1);
 		}
 	if 	($sunset>$start_time&&$sunset<$end_time)
-		$wooden_walkway->open_times_end[$last_one]=$time->parameter[5]->parameterValue;
+		$wooden_walkway->open_times_end[$last_one]=$time->SunSetTime;
 }
 function set_open_times(&$wooden_walkway,$weatherElement){
 	if ($weatherElement[1]->elementValue=="大")//潮差
@@ -112,7 +124,7 @@ function set_open_times(&$wooden_walkway,$weatherElement){
 	else
 		$time_interval=90;
 	array_push($wooden_walkway->open_times_start,"08:00");
-	array_push($wooden_walkway->open_times_end,"18:00");
+	array_push($wooden_walkway->open_times_end,"18:30");
 	foreach ($weatherElement[2]->time as $time)
 		if ($time->parameter[0]->parameterValue=="滿潮")
 			separate_open_times($wooden_walkway,$time_interval,$time->dataTime);
@@ -122,15 +134,15 @@ function separate_open_times(&$wooden_walkway,$time_interval,$dataTime){
 	$tidal_start=string_to_minutes(substr($dataTime,11,5))-$time_interval;
 	$tidal_end=string_to_minutes(substr($dataTime,11,5))+$time_interval;
 	//echo minutes_to_string($tidal_start)."*".minutes_to_string($tidal_end)."*";
-	if ($tidal_end<=480||$tidal_start>=1080)
+	if ($tidal_end<=480||$tidal_start>=1110)
 		return;
 	for ($i=0;$i<count($wooden_walkway->open_times_start);$i++)
 		{
 		$start_time=string_to_minutes($wooden_walkway->open_times_start[$i]);
 		$end_time=string_to_minutes($wooden_walkway->open_times_end[$i]);
-		//echo "*".$tidal_start."*".$tidal_end."*".$start_time."*".$end_time."*";
+		//echo $dataTime."*".$tidal_start."*".$tidal_end."*".$start_time."*".$end_time."*<br>";
 		//*900*1080*480*1080
-		if ( $tidal_end<=$start_time || $tidal_start>=$end_time)
+		if ($tidal_end<=$start_time || $tidal_start>=$end_time)
 			continue;
 		if ( $tidal_end>$start_time && $tidal_start<=$start_time)
 			$wooden_walkway->open_times_start[$i]=minutes_to_string($tidal_end);
