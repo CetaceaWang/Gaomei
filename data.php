@@ -59,11 +59,11 @@ function read_to_open_times(){
 	$wooden_walkways=array();//開放日期時間陣列
 	$tidal=read_to_json($Tidal_URL);
 	$tidal_json=json_decode($tidal);
-	foreach ($tidal_json->records->location[0]->validTime as $validTime) 
+	foreach ($tidal_json->records->TideForecasts[0]->Location->TimePeriods->Daily as $validTime) 
 		{
 			$wooden_walkway=new WoodenWalkway;
-			$wooden_walkway->date=$validTime->startTime;
-			set_open_times($wooden_walkway,$validTime->weatherElement);
+			$wooden_walkway->date=$validTime->Date;//日期
+			set_open_times($wooden_walkway,$validTime);//有潮差及滿潮
 			array_push($wooden_walkways, $wooden_walkway);
 			//display_wooden_walkway($wooden_walkway);
 		}
@@ -119,15 +119,15 @@ function set_sunset(&$wooden_walkway,$time){
 		$wooden_walkway->open_times_end[$last_one]=$time->SunSetTime;
 }
 function set_open_times(&$wooden_walkway,$weatherElement){
-	if ($weatherElement[1]->elementValue=="大")//潮差
+	if ($weatherElement->TideRange=="大")//潮差
 		$time_interval=120;
 	else
 		$time_interval=90;
 	array_push($wooden_walkway->open_times_start,"08:00");
 	array_push($wooden_walkway->open_times_end,"18:30");
-	foreach ($weatherElement[2]->time as $time)
-		if ($time->parameter[0]->parameterValue=="滿潮")
-			separate_open_times($wooden_walkway,$time_interval,$time->dataTime);
+	foreach ($weatherElement->Time as $time)
+		if ($time->Tide=="滿潮")
+			separate_open_times($wooden_walkway,$time_interval,$time->DateTime);
 }
 function separate_open_times(&$wooden_walkway,$time_interval,$dataTime){
 	//"2022-10-30 01:16:00"
